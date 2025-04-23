@@ -169,21 +169,31 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
     }
 
 
-     // Check if the bot joined a voice channel
-     if (newState.id === client.user?.id && newState.channel) {
-        
-            
+    if (newState.id === client.user?.id && newState.channel) {
+        const existingConnection = getVoiceConnection(newState.guild.id);
+    
+        if (existingConnection) {
+            if (existingConnection.joinConfig.channelId === newState.channel.id) {
+                console.log(`Bot is already connected to the channel: ${newState.channel.name}`);
+                return; // Skip reconnecting
+            } else {
+                console.log(`Bot is switching from channel ${existingConnection.joinConfig.channelId} to ${newState.channel.id}`);
+                existingConnection.destroy(); // Disconnect from the current channel
+            }
+        }
+    
         const connection = joinVoiceChannel({
             channelId: newState.channel.id,
             guildId: newState.guild.id,
             adapterCreator: newState.guild.voiceAdapterCreator,
         });
-
+    
         console.log('Bot joined voice channel:', newState.channel.name);
-
+    
         // Handle speaking events
         handleSpeakingEvents(connection, newState.guild);
     }
+
 });
 
 // Start the bot
