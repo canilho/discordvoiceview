@@ -38,12 +38,15 @@ wss.on('connection', (ws) => {
                 if (guild) {
                     const channel = guild.channels.cache.get(command.channelId);
                     if (channel && channel.isVoiceBased()) {
-                        joinVoiceChannel({
+                        const connection = joinVoiceChannel({
                             channelId: channel.id,
                             guildId: guild.id,
                             adapterCreator: guild.voiceAdapterCreator,
                         });
                         console.log(`Bot joined voice channel: ${channel.name}`);
+
+                        // Handle speaking events
+                        handleSpeakingEvents(connection, guild);
                     } else {
                         console.error('Invalid channel ID or not a voice channel.');
                     }
@@ -75,6 +78,8 @@ const client = new Client({
     ]
 });
 
+
+
 var getChannelData = function (ws: any) {
     const guild = client.guilds.cache.first(); // Replace with your specific guild ID if needed
     if (guild) {
@@ -97,6 +102,43 @@ var getChannelData = function (ws: any) {
     }
 }
 
+function handleSpeakingEvents(connection: VoiceConnection, guild: any) {
+    const receiver = connection.receiver;
+
+    receiver.speaking.on('start', (userId: string) => {
+        const user: GuildMember | undefined = guild.members.cache.get(userId);
+        console.log(`User started speaking: ${userId}`);
+        if (user) {
+            const data = {               
+                userId: user.id,
+                username: user.user.username,
+                isSpeaking: true,
+            };
+            console.log(`User started speaking: ${user.user.username}`);
+            connectedClients.forEach((client: WebSocket) => {
+                client.send(JSON.stringify(data));
+                console.log(`Sent speaking event to client: ${user.user.username}`);
+            });
+        }
+    });
+
+    receiver.speaking.on('end', (userId: string) => {
+        const user: GuildMember | undefined = guild.members.cache.get(userId);
+        console.log(`User stoped speaking: ${userId}`);
+        if (user) {
+            const data = {
+                userId: user.id,
+                username: user.user.username,
+                isSpeaking: false,
+            };
+            console.log(`User stopped speaking: ${user.user.username}`);
+            connectedClients.forEach((client: WebSocket) => {
+                client.send(JSON.stringify(data));
+                console.log(`Sent speaking event to client: ${user.user.username}`);
+            });
+        }
+    });
+}
 
 // Listen for voice state updates
 client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
@@ -139,45 +181,8 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
 
         console.log('Bot joined voice channel:', newState.channel.name);
 
-        const receiver = connection.receiver;
-
-        receiver.speaking.on('start', (userId: string) => {
-            const user: GuildMember | undefined = newState.guild.members.cache.get(userId);
-            if (user) {
-            const data: {
-                userId: string;
-                username: string;
-                isSpeaking: boolean;
-            } = {
-                userId: user.id,
-                username: user.user.username,
-                isSpeaking: true,
-            };
-            connectedClients.forEach((client: WebSocket) => {
-                console.log('Sending data to client:', data);
-                client.send(JSON.stringify(data));
-            });
-            }
-        });
-        
-        receiver.speaking.on('end', (userId: string) => {
-            const user: GuildMember | undefined = newState.guild.members.cache.get(userId);
-            if (user) {
-            const data: {
-                userId: string;
-                username: string;
-                isSpeaking: boolean;
-            } = {
-                userId: user.id,
-                username: user.user.username,
-                isSpeaking: false,
-            };
-            connectedClients.forEach((client: WebSocket) => {
-                console.log('Sending data to client:', data);
-                client.send(JSON.stringify(data));
-            });
-            }
-        });
+        // Handle speaking events
+        handleSpeakingEvents(connection, newState.guild);
     }
 });
 

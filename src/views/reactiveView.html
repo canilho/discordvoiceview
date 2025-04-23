@@ -60,30 +60,42 @@
         socket.onmessage = function(event) {
             //console.log('Message from server ', event.data);
             const data = JSON.parse(event.data);
-            voiceChannels = data.voiceChannels;
+            // Check if the data is about speaking
+            if (data.isSpeaking !== undefined) {
+                const userElement = document.querySelector(`[data-user-id="${data.userId}"]`);
+                if (userElement) {
+                    if (data.isSpeaking) {
+                        userElement.classList.add('speaking');
+                    } else {
+                        userElement.classList.remove('speaking');
+                    }
+                }
+            } else if (data.voiceChannels) {
+                voiceChannels = data.voiceChannels;
 
-            const channelSelect = document.getElementById('channelSelect');
-            // Check if channelSelect has a value, if so, save it for later
-            const selectedChannelValue = channelSelect.value;
-            
-            // verify if the channelSelect is empty
-            if (channelSelect.options.length > 1) {
-                channelSelect.innerHTML = '<option value="">-- Select a Channel --</option>';
+                const channelSelect = document.getElementById('channelSelect');
+                // Check if channelSelect has a value, if so, save it for later
+                const selectedChannelValue = channelSelect.value;
+                
+                // verify if the channelSelect is empty
+                if (channelSelect.options.length > 1) {
+                    channelSelect.innerHTML = '<option value="">-- Select a Channel --</option>';
+                }
+
+                // Populate the channel select dropdown
+                voiceChannels.forEach(channel => {
+                    const option = document.createElement('option');
+                    option.value = channel.id;
+                    option.textContent = channel.name;
+                    channelSelect.appendChild(option);
+                });
+                //if selectedChannelId is not empty, set it to the channelSelect
+                if (selectedChannelValue) {
+                    channelSelect.value = selectedChannelValue;
+                }
+
+                updateUserList(channelSelect);           
             }
-
-            // Populate the channel select dropdown
-            voiceChannels.forEach(channel => {
-                const option = document.createElement('option');
-                option.value = channel.id;
-                option.textContent = channel.name;
-                channelSelect.appendChild(option);
-            });
-            //if selectedChannelId is not empty, set it to the channelSelect
-            if (selectedChannelValue) {
-                channelSelect.value = selectedChannelValue;
-            }
-
-            updateUserList(channelSelect);           
         };
 
         document.getElementById('channelSelect').addEventListener('change', function() {
@@ -101,6 +113,8 @@
                 if (selectedChannel) {
                     selectedChannel.users.forEach(user => {
                         const userItem = document.createElement('div');
+                        userItem.setAttribute('data-user-id', user.id); // Add data-user-id attribute
+
                         
                         const div = document.createElement('div');
                         div.style.display = 'flex';
@@ -127,7 +141,7 @@
                         div.appendChild(userName);
                         userItem.appendChild(div);
                         
-                        userItem.className = 'user' + (user.isSpeaking ? ' speaking' : '');                       
+                        userItem.className = 'user';                       
                         userList.appendChild(userItem);
                     });
                 }
