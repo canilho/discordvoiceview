@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactive Voice Channel View</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .user-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .user {
+            padding: 10px;
+            border: 1px solid #000000;
+            margin: 5px 0;
+            border-radius: 5px;
+            background-color: #ffb5b5;
+            transition: background-color 0.3s;
+        }
+        .speaking {
+            background-color: #5bf7b1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Channel Users</h1>
+    <label for="channelSelect">Select a Voice Channel:</label>
+    <select id="channelSelect">
+        <option value="">-- Select a Channel --</option>
+    </select>
+    <h2>Current Channel: </h2>
+    <ul class="user-list" id="userList">
+        <!-- User list will be populated here -->
+    </ul>
+
+    <script>
+        const socket = new WebSocket('ws://localhost:8000'); 
+        let voiceChannels = [];
+
+        /*
+        {"voiceChannels":
+            [
+                {"id":"982306219660304470","name":"General","users":[]},
+                {"id":"982306638344101938","name":"🎥Streaming","users":
+                    [
+                        {"username":"canilho","isSpeaking":true},
+                        {"username":"ridersslach","isSpeaking":true}
+                    ]
+                }
+            ]
+        }
+        */
+        socket.onmessage = function(event) {
+            //console.log('Message from server ', event.data);
+            const data = JSON.parse(event.data);
+            voiceChannels = data.voiceChannels;
+
+            const channelSelect = document.getElementById('channelSelect');
+            // Check if channelSelect has a value, if so, save it for later
+            const selectedChannelValue = channelSelect.value;
+            
+            // verify if the channelSelect is empty
+            if (channelSelect.options.length > 1) {
+                channelSelect.innerHTML = '<option value="">-- Select a Channel --</option>';
+            }
+
+            // Populate the channel select dropdown
+            voiceChannels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = channel.name;
+                channelSelect.appendChild(option);
+            });
+            //if selectedChannelId is not empty, set it to the channelSelect
+            if (selectedChannelValue) {
+                channelSelect.value = selectedChannelValue;
+            }
+
+            updateUserList(channelSelect);           
+        };
+
+        document.getElementById('channelSelect').addEventListener('change', function() {
+            updateUserList(channelSelect);
+        });
+
+        var updateUserList = function(selectedChannelValue) {
+           
+            const userList = document.getElementById('userList');
+            userList.innerHTML = '';           
+            
+            if (selectedChannelValue) {
+                const selectedChannel = voiceChannels.find(channel => channel.id === selectedChannelValue.value);
+
+                if (selectedChannel) {
+                    selectedChannel.users.forEach(user => {
+                        const userItem = document.createElement('div');
+                        
+                        const div = document.createElement('div');
+                        div.style.display = 'flex';
+
+                        const userImage = document.createElement('img');
+                        if(user.avatar === null) {
+                            userImage.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+                        } else {
+                            userImage.src = user.avatar;
+                        }
+                        
+                        userImage.alt = user.username;
+                        userImage.style.width = '30px';
+                        userImage.style.height = '30px';
+                        userImage.style.borderRadius = '50%';
+                        userImage.style.marginRight = '10px';
+                        
+                        div.appendChild(userImage);
+                        const userName = document.createElement('span');
+                        userName.textContent = user.username;
+                        userName.style.fontSize = '20px';
+                        userName.style.fontWeight = 'bold';
+                        userName.style.color = '#000000';
+                        div.appendChild(userName);
+                        userItem.appendChild(div);
+                        
+                        userItem.className = 'user' + (user.isSpeaking ? ' speaking' : '');                       
+                        userList.appendChild(userItem);
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
