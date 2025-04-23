@@ -34,7 +34,8 @@
     <select id="channelSelect">
         <option value="">-- Select a Channel --</option>
     </select>
-    <h2>Current Channel: </h2>
+    <button id="joinButton">Join Channel</button>
+    <button id="leaveButton">Leave Channel</button>
     <ul class="user-list" id="userList">
         <!-- User list will be populated here -->
     </ul>
@@ -132,6 +133,19 @@
                 }
             }
         }
+
+        document.getElementById('joinButton').addEventListener('click', () => {
+            const selectedChannelId = document.getElementById('channelSelect').value;
+            if (selectedChannelId) {
+                socket.send(JSON.stringify({ type: 'join', channelId: selectedChannelId }));
+            } else {
+                alert('Please select a channel to join.');
+            }
+        });
+
+        document.getElementById('leaveButton').addEventListener('click', () => {
+            socket.send(JSON.stringify({ type: 'leave' }));
+        });
     </script>
 </body>
 </html>

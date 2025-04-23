@@ -3,7 +3,7 @@ import path from 'path';
 import { WebSocketServer } from 'ws';
 import { Client, GatewayIntentBits, VoiceState, Collection, GuildMember,
          InternalDiscordGatewayAdapterCreator, APIConnection } from 'discord.js';
-    import { joinVoiceChannel as discordJoinVoiceChannel, VoiceConnection } from '@discordjs/voice';
+    import { joinVoiceChannel as discordJoinVoiceChannel, VoiceConnection, getVoiceConnection } from '@discordjs/voice';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -26,8 +26,39 @@ let connectedClients: any[] = [];
 wss.on('connection', (ws) => {
     console.log('WebSocket connection established');
     connectedClients.push(ws);
-  
+
     getChannelData(ws);
+
+    ws.on('message', async (message) => {
+        try {
+            const command = JSON.parse(message.toString());
+
+            if (command.type === 'join') {
+                const guild = client.guilds.cache.first(); // Replace with your specific guild ID if needed
+                if (guild) {
+                    const channel = guild.channels.cache.get(command.channelId);
+                    if (channel && channel.isVoiceBased()) {
+                        joinVoiceChannel({
+                            channelId: channel.id,
+                            guildId: guild.id,
+                            adapterCreator: guild.voiceAdapterCreator,
+                        });
+                        console.log(`Bot joined voice channel: ${channel.name}`);
+                    } else {
+                        console.error('Invalid channel ID or not a voice channel.');
+                    }
+                }
+            } else if (command.type === 'leave') {
+                const connection = getVoiceConnection(client.guilds.cache.first()?.id || '');
+                if (connection) {
+                    connection.destroy();
+                    console.log('Bot left the voice channel.');
+                }
+            }
+        } catch (err) {
+            console.error('Error processing WebSocket message:', err);
+        }
+    });
 
     ws.on('close', () => {
         console.log('WebSocket connection closed');
@@ -69,7 +100,8 @@ var getChannelData = function (ws: any) {
 
 // Listen for voice state updates
 client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
-    const guild = newState.guild;   
+    const guild = newState.guild;  
+    var data = {}; 
 
     if (guild) {
         // Get all voice channels in the guild
@@ -88,7 +120,7 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
             }));
 
         // Send updated voice channel list to all connected WebSocket clients
-        const data = { voiceChannels };
+        data = { voiceChannels };
         connectedClients.forEach((client) => {
             client.send(JSON.stringify(data));
         });
@@ -97,11 +129,15 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
 
      // Check if the bot joined a voice channel
      if (newState.id === client.user?.id && newState.channel) {
+        
+            
         const connection = joinVoiceChannel({
             channelId: newState.channel.id,
             guildId: newState.guild.id,
             adapterCreator: newState.guild.voiceAdapterCreator,
         });
+
+        console.log('Bot joined voice channel:', newState.channel.name);
 
         const receiver = connection.receiver;
 
@@ -118,6 +154,7 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
                 isSpeaking: true,
             };
             connectedClients.forEach((client: WebSocket) => {
+                console.log('Sending data to client:', data);
                 client.send(JSON.stringify(data));
             });
             }
@@ -136,6 +173,7 @@ client.on('voiceStateUpdate', (oldState: VoiceState, newState: VoiceState) => {
                 isSpeaking: false,
             };
             connectedClients.forEach((client: WebSocket) => {
+                console.log('Sending data to client:', data);
                 client.send(JSON.stringify(data));
             });
             }
