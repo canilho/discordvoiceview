@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            background-color: #d7e3b9;
             margin: 0;
             padding: 20px;
         }
@@ -26,48 +26,106 @@
         .speaking {
             background-color: #5bf7b1;
         }
+
+    /* Avatar Animations*/
+    #AvatarView {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .avatar-container {
+        position: relative;
+        width: 256px;
+        height: 256px;
+        margin-left: 25px;
+    }
+
+    .avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        /*border: 5px solid transparent;*/
+        transition: transform 0.3s, border-color 0.3s;
+    }
+
+    .avatar-container.userSpeaking {
+        animation: userSpeaking 3s infinite alternate-reverse;
+    }
+
+    @keyframes userSpeaking {
+        0% {
+            transform: scale(1);
+            border: 1px solid green;
+            border-radius: 50%;
+        }
+        25% {
+            transform: scale(1.2);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        75% {
+            transform: scale(1.2);
+        }
+        90% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1.2);
+            border: 5px solid green;
+            border-radius: 50%;
+            /*border-color: green;*/
+        }
+    }
+
     </style>
 </head>
 <body>
-    <h1>Voice Channel Users</h1>
+    <h3 class="one">Reactive Voice Chat</h3>
+    <!--h3> Server: <span id="serverName"> </span></h3!-->
     <label for="channelSelect">Select a Voice Channel:</label>
     <select id="channelSelect">
-        <option value="">-- Select a Channel --</option>
+        <option value="">-- Select a Voice Channel --</option>
     </select>
     <button id="joinButton">Join Channel</button>
     <button id="leaveButton">Leave Channel</button>
+    <label for="colorPicker">Select Background Color:</label>
+    <input type="color" id="colorPicker" value="#ff004c">
     <ul class="user-list" id="userList">
         <!-- User list will be populated here -->
     </ul>
-
+    <div id="AvatarView"> </div>
+    
     <script>
         const socket = new WebSocket('ws://localhost:8000'); 
         let voiceChannels = [];
+        var users = [];
+     
+        // Set the initial background color
+        document.getElementById('colorPicker').addEventListener('input', function () {
+            document.body.style.backgroundColor = this.value;
+        });
 
-        /*
-        {"voiceChannels":
-            [
-                {"id":"982306219660304470","name":"General","users":[]},
-                {"id":"982306638344101938","name":"🎥Streaming","users":
-                    [
-                        {"username":"canilho","isSpeaking":true},
-                        {"username":"ridersslach","isSpeaking":true}
-                    ]
-                }
-            ]
-        }
-        */
         socket.onmessage = function(event) {
-            //console.log('Message from server ', event.data);
+            // Parse the incoming message
             const data = JSON.parse(event.data);
             // Check if the data is about speaking
             if (data.isSpeaking !== undefined) {
+                // List
                 const userElement = document.querySelector(`[data-user-id="${data.userId}"]`);
+                // Avatars
+                const avatarEl = document.querySelector(`[avatar-user-id="${data.userId}"]`);
                 if (userElement) {
                     if (data.isSpeaking) {
+                        // List animation
                         userElement.classList.add('speaking');
+                        // avatar animation
+                        avatarEl.classList.add('userSpeaking');
                     } else {
                         userElement.classList.remove('speaking');
+                        avatarEl.classList.remove('userSpeaking');
                     }
                 }
             } else if (data.voiceChannels) {
@@ -109,9 +167,15 @@
             
             if (selectedChannelValue) {
                 const selectedChannel = voiceChannels.find(channel => channel.id === selectedChannelValue.value);
+                //document.getElementById('serverName').innerHTML = selectedChannel.guildname;
 
                 if (selectedChannel) {
+                    users = selectedChannel.users;
                     selectedChannel.users.forEach(user => {
+                        // Do not show the bot user
+                        if (user.username === "ReactiveVoicesAvatars") {
+                            return;
+                        }
                         const userItem = document.createElement('div');
                         userItem.setAttribute('data-user-id', user.id); // Add data-user-id attribute
 
@@ -144,6 +208,8 @@
                         userItem.className = 'user';                       
                         userList.appendChild(userItem);
                     });
+                // Draw avatars after updating the user list
+                drawAvatars();
                 }
             }
         }
@@ -160,6 +226,31 @@
         document.getElementById('leaveButton').addEventListener('click', () => {
             socket.send(JSON.stringify({ type: 'leave' }));
         });
+
+
+        // Function to draw avatars side by side
+        function drawAvatars() {
+            const avatarView = document.getElementById('AvatarView');
+            avatarView.innerHTML = ''; // Clear previous avatars
+
+            users.forEach(user => {
+                // Do not show the bot user
+                if (user.username === "ReactiveVoicesAvatars") {
+                    return;
+                }
+                const avatarContainer = document.createElement('div');
+                avatarContainer.className = 'avatar-container';
+                avatarContainer.setAttribute('avatar-user-id', user.id); // Add data-user-id attribute
+
+                const avatarImage = document.createElement('img');
+                avatarImage.src = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'; // Default avatar
+                avatarImage.alt = user.username;
+                avatarImage.className = 'avatar';
+
+                avatarContainer.appendChild(avatarImage);
+                avatarView.appendChild(avatarContainer);
+            });
+        }
     </script>
 </body>
 </html>

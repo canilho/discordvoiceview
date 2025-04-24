@@ -88,11 +88,11 @@ var getChannelData = function (ws: any) {
             .map((channel) => ({
                 id: channel.id,
                 name: channel.name,
+                guildname: channel.guild.name,
                 users: Array.from((channel.members as Collection<string, GuildMember>).values()).map((member) => ({
                     username: member.user.username,
                     id: member.id,
                     voiceActive: member.voice.selfMute === false && member.voice.selfDeaf === false,
-                    isSpeaking: member.voice.selfMute === false && member.voice.selfDeaf === false,
                     avatar: member.user.avatarURL() || null,
                 }))
             }));
