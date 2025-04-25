@@ -4,93 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reactive Voice Channel View</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #d7e3b9;
-            margin: 0;
-            padding: 20px;
-        }
-        .user-list {
-            list-style-type: none;
-            padding: 0;
-        }
-        .user {
-            padding: 10px;
-            border: 1px solid #000000;
-            margin: 5px 0;
-            border-radius: 5px;
-            background-color: #ffb5b5;
-            transition: background-color 0.3s;
-        }
-        .speaking {
-            background-color: #5bf7b1;
-        }
 
-    /* Avatar Animations*/
-    #AvatarView {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 20px;
-    }
-
-    .avatar-container {
-        position: relative;
-        width: 256px;
-        height: 256px;
-        margin-left: 25px;
-    }
-
-    .avatar {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        /*border: 5px solid transparent;*/
-        transition: transform 0.3s, border-color 0.3s;
-    }
-
-    .avatar-container.userSpeaking {
-        animation: userSpeaking 3s infinite alternate-reverse;
-    }
-
-    @keyframes userSpeaking {
-        0% {
-            transform: scale(1);
-            border: 1px solid green;
-            border-radius: 50%;
-        }
-        25% {
-            transform: scale(1.2);
-        }
-        50% {
-            transform: scale(1.1);
-        }
-        75% {
-            transform: scale(1.2);
-        }
-        90% {
-            transform: scale(1.1);
-        }
-        100% {
-            transform: scale(1.2);
-            border: 5px solid green;
-            border-radius: 50%;
-            /*border-color: green;*/
-        }
-    }
-
-    </style>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/script.js" defer></script>
 </head>
 <body>
-    <h3 class="one">Reactive Voice Chat</h3>
+    <h1 class="text-center text-primary">Reactive Voice Channel View</h1>
+    <button class="btn btn-success" id="joinButton">Call bot to Channel</button>
+    <button class="btn btn-danger" id="leaveButton">Disconect Bot</button>
     <!--h3> Server: <span id="serverName"> </span></h3!-->
     <label for="channelSelect">Select a Voice Channel:</label>
     <select id="channelSelect">
         <option value="">-- Select a Voice Channel --</option>
     </select>
-    <button id="joinButton">Join Channel</button>
-    <button id="leaveButton">Leave Channel</button>
     <label for="colorPicker">Select Background Color:</label>
     <input type="color" id="colorPicker" value="#ff004c">
     <ul class="user-list" id="userList">
@@ -98,159 +26,5 @@
     </ul>
     <div id="AvatarView"> </div>
     
-    <script>
-        const socket = new WebSocket('ws://localhost:8000'); 
-        let voiceChannels = [];
-        var users = [];
-     
-        // Set the initial background color
-        document.getElementById('colorPicker').addEventListener('input', function () {
-            document.body.style.backgroundColor = this.value;
-        });
-
-        socket.onmessage = function(event) {
-            // Parse the incoming message
-            const data = JSON.parse(event.data);
-            // Check if the data is about speaking
-            if (data.isSpeaking !== undefined) {
-                // List
-                const userElement = document.querySelector(`[data-user-id="${data.userId}"]`);
-                // Avatars
-                const avatarEl = document.querySelector(`[avatar-user-id="${data.userId}"]`);
-                if (userElement) {
-                    if (data.isSpeaking) {
-                        // List animation
-                        userElement.classList.add('speaking');
-                        // avatar animation
-                        avatarEl.classList.add('userSpeaking');
-                    } else {
-                        userElement.classList.remove('speaking');
-                        avatarEl.classList.remove('userSpeaking');
-                    }
-                }
-            } else if (data.voiceChannels) {
-                voiceChannels = data.voiceChannels;
-
-                const channelSelect = document.getElementById('channelSelect');
-                // Check if channelSelect has a value, if so, save it for later
-                const selectedChannelValue = channelSelect.value;
-                
-                // verify if the channelSelect is empty
-                if (channelSelect.options.length > 1) {
-                    channelSelect.innerHTML = '<option value="">-- Select a Channel --</option>';
-                }
-
-                // Populate the channel select dropdown
-                voiceChannels.forEach(channel => {
-                    const option = document.createElement('option');
-                    option.value = channel.id;
-                    option.textContent = channel.name;
-                    channelSelect.appendChild(option);
-                });
-                //if selectedChannelId is not empty, set it to the channelSelect
-                if (selectedChannelValue) {
-                    channelSelect.value = selectedChannelValue;
-                }
-
-                updateUserList(channelSelect);           
-            }
-        };
-
-        document.getElementById('channelSelect').addEventListener('change', function() {
-            updateUserList(channelSelect);
-        });
-
-        var updateUserList = function(selectedChannelValue) {
-           
-            const userList = document.getElementById('userList');
-            userList.innerHTML = '';           
-            
-            if (selectedChannelValue) {
-                const selectedChannel = voiceChannels.find(channel => channel.id === selectedChannelValue.value);
-                //document.getElementById('serverName').innerHTML = selectedChannel.guildname;
-
-                if (selectedChannel) {
-                    users = selectedChannel.users;
-                    selectedChannel.users.forEach(user => {
-                        // Do not show the bot user
-                        if (user.username === "ReactiveVoicesAvatars") {
-                            return;
-                        }
-                        const userItem = document.createElement('div');
-                        userItem.setAttribute('data-user-id', user.id); // Add data-user-id attribute
-
-                        
-                        const div = document.createElement('div');
-                        div.style.display = 'flex';
-
-                        const userImage = document.createElement('img');
-                        if(user.avatar === null) {
-                            userImage.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
-                        } else {
-                            userImage.src = user.avatar;
-                        }
-                        
-                        userImage.alt = user.username;
-                        userImage.style.width = '30px';
-                        userImage.style.height = '30px';
-                        userImage.style.borderRadius = '50%';
-                        userImage.style.marginRight = '10px';
-                        
-                        div.appendChild(userImage);
-                        const userName = document.createElement('span');
-                        userName.textContent = user.username;
-                        userName.style.fontSize = '20px';
-                        userName.style.fontWeight = 'bold';
-                        userName.style.color = '#000000';
-                        div.appendChild(userName);
-                        userItem.appendChild(div);
-                        
-                        userItem.className = 'user';                       
-                        userList.appendChild(userItem);
-                    });
-                // Draw avatars after updating the user list
-                drawAvatars();
-                }
-            }
-        }
-
-        document.getElementById('joinButton').addEventListener('click', () => {
-            const selectedChannelId = document.getElementById('channelSelect').value;
-            if (selectedChannelId) {
-                socket.send(JSON.stringify({ type: 'join', channelId: selectedChannelId }));
-            } else {
-                alert('Please select a channel to join.');
-            }
-        });
-
-        document.getElementById('leaveButton').addEventListener('click', () => {
-            socket.send(JSON.stringify({ type: 'leave' }));
-        });
-
-
-        // Function to draw avatars side by side
-        function drawAvatars() {
-            const avatarView = document.getElementById('AvatarView');
-            avatarView.innerHTML = ''; // Clear previous avatars
-
-            users.forEach(user => {
-                // Do not show the bot user
-                if (user.username === "ReactiveVoicesAvatars") {
-                    return;
-                }
-                const avatarContainer = document.createElement('div');
-                avatarContainer.className = 'avatar-container';
-                avatarContainer.setAttribute('avatar-user-id', user.id); // Add data-user-id attribute
-
-                const avatarImage = document.createElement('img');
-                avatarImage.src = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'; // Default avatar
-                avatarImage.alt = user.username;
-                avatarImage.className = 'avatar';
-
-                avatarContainer.appendChild(avatarImage);
-                avatarView.appendChild(avatarContainer);
-            });
-        }
-    </script>
 </body>
 </html>

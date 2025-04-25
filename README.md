@@ -12,15 +12,22 @@ This project is a Discord bot that detects users in the same voice channel and i
 
 ```
 discord-bot
-├── src
-│   ├── bot.ts                # Entry point of the Discord bot~
+├── src                
 │   ├── server.ts             # Server for managing conections with bot and view
+│   │                         
 │   ├── events
-│   │   ├──                   # Events should be managed from here
+│   │   └──                   # Events should be managed from here
 │   ├── utils
 │   │   └──                   # Tools or necessary structs
 │   └── views
+│       ├── css
+│       │   └── style.css     # styles for the html client
+│       │   
+│       ├── js
+│       │   └── script.js     # javascript helpers
+│       │   
 │       └── reactiveView.html    # HTML structure for the reactive view
+│
 ├── package.json               # npm configuration file
 ├── tsconfig.json              # TypeScript configuration file
 └── README.md                  # Project documentation

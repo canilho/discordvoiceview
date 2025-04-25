@@ -18,6 +18,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'reactiveView.html'));
 });
 
+// Serve static files (CSS, JS) from the views directory
+app.use('/css', express.static(path.join(__dirname, 'views/css')));
+app.use('/js', express.static(path.join(__dirname, 'views/js')));
+app.use('/bootstrap', express.static(path.join(__dirname, '../node_modules/bootstrap/dist')));
+app.use('/jquery', express.static(path.join(__dirname, '../node_modules/jquery/dist')));
+
 // Start the WebSocket server
 const wss = new WebSocketServer({ port: 8000 });
 let connectedClients: any[] = [];
